@@ -1,8 +1,4 @@
-var __extends = (this && this.__extends) || function (d, b) {
-    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
-    function __() { this.constructor = d; }
-    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-};
+var _this = this;
 window.onload = function () {
     //1.任何一个显示对象需要一个1矩阵
     //2.把显示对象的属性转化为自己的相对矩阵
@@ -17,20 +13,30 @@ window.onload = function () {
     panel.y = 50;
     panel.alpha = 0.5;
     setInterval(function () {
+        context2D.save();
         context2D.clearRect(0, 0, canvas.width, canvas.height); //在显示图片之前先清屏，将之前帧的图片去掉,清屏范围最好设置成画布的宽与高
-        stage.draw(context2D);
-    }, 100);
+        stage.draw(context2D); //最外层开始画
+        context2D.restore();
+    }, 50);
+    var list = new DisplayObjectContainer();
+    list.addEventListener("onmousemove", function (e) {
+        var dy = currentY - lastY;
+        list.y = list.y + dy;
+    }, _this, false);
     /*
     //模拟TextField与Bitmap
     */
     //文字
-    var word1 = new TextField();
-    word1.x = 10;
-    word1.y = 30;
-    word1.text = "欧尼酱";
-    word1.color = "#FF0000";
-    word1.size = 20;
-    word1.alpha = 0.8;
+    var button = new Button();
+    button.x = 10;
+    button.y = 30;
+    button.text = "点我";
+    button.color = "#FF0000";
+    button.size = 20;
+    button.enable = true;
+    button.addEventListener("onclick", function () {
+        button.text = "欧尼酱";
+    }, _this, false);
     var word2 = new TextField();
     word2.text = "第二层容器";
     word2.color = "#0000FF";
@@ -40,113 +46,66 @@ window.onload = function () {
     avater.image.src = "avater.jpg";
     //加载完图片资源
     avater.image.onload = function () {
-        avater.width = 400;
-        avater.height = 400;
-        //avater.rotation = 25;
+        list.addChild(avater);
+        list.addChild(button);
         panel.addChild(word2);
-        stage.addChild(avater);
-        stage.addChild(word1);
+        stage.addChild(list);
         stage.addChild(panel);
         //stage.removeChild(panel);
     };
-};
-var DisplayObject = (function () {
-    function DisplayObject() {
-        this.x = 0;
-        this.y = 0;
-        this.scaleX = 1;
-        this.scaleY = 1;
-        this.rotation = 0;
-        this.matrix = null;
-        this.globalMatrix = null;
-        this.alpha = 1; //相对
-        this.globalAlpha = 1; //全局                             
-        this.parent = null;
-        this.matrix = new math.Matrix();
-        this.globalMatrix = new math.Matrix();
-    }
-    //final，所有子类都要执行且不能修改
-    DisplayObject.prototype.draw = function (context2D) {
-        this.matrix.updateFromDisplayObject(this.x, this.y, this.scaleX, this.scaleY, this.rotation); //初始化矩阵
-        //console.log(this.matrix.toString());
-        //Alpha值
-        if (this.parent) {
-            this.globalAlpha = this.parent.globalAlpha * this.alpha;
-            this.globalMatrix = math.matrixAppendMatrix(this.matrix, this.parent.globalMatrix);
-        }
-        else {
-            this.globalAlpha = this.alpha;
-            this.globalMatrix = this.matrix;
-        }
-        context2D.globalAlpha = this.globalAlpha;
-        //console.log(context2D.globalAlpha);
-        //变换
-        context2D.setTransform(this.globalMatrix.a, this.globalMatrix.b, this.globalMatrix.c, this.globalMatrix.d, this.globalMatrix.tx, this.globalMatrix.ty);
-        this.render(context2D);
-        //模板方法模式
+    //记录位置
+    var currentX;
+    var currentY;
+    var lastX;
+    var lastY;
+    var isMouseDown = false; //检测鼠标是否按下
+    var hitResult; //检测是否点到控件
+    window.onmousedown = function (e) {
+        isMouseDown = true;
+        var targetDisplayObjectArray = EventManager.getInstance().targetDisplayObjcetArray;
+        targetDisplayObjectArray.splice(0, targetDisplayObjectArray.length);
+        hitResult = stage.hitTest(e.offsetX, e.offsetY);
+        currentX = e.offsetX;
+        currentY = e.offsetY;
     };
-    //在子类中重写
-    DisplayObject.prototype.render = function (context2D) {
-    };
-    return DisplayObject;
-}());
-var Bitmap = (function (_super) {
-    __extends(Bitmap, _super);
-    function Bitmap() {
-        _super.call(this);
-        this.width = 0;
-        this.height = 0;
-        this.image = document.createElement("img");
-    }
-    Bitmap.prototype.render = function (context2D) {
-        context2D.drawImage(this.image, 0, 0, this.width, this.height);
-        //context2D.drawImage(this.image, 0, 0);
-    };
-    return Bitmap;
-}(DisplayObject));
-var TextField = (function (_super) {
-    __extends(TextField, _super);
-    function TextField() {
-        _super.apply(this, arguments);
-        this.text = "";
-        this.color = "";
-        this.size = 0;
-    }
-    TextField.prototype.render = function (context2D) {
-        context2D.font = "normal lighter " + this.size + "px" + " cursive";
-        context2D.fillStyle = this.color;
-        context2D.fillText(this.text, 0, 0);
-    };
-    return TextField;
-}(DisplayObject));
-var DisplayObjectContainer = (function (_super) {
-    __extends(DisplayObjectContainer, _super);
-    function DisplayObjectContainer() {
-        _super.apply(this, arguments);
-        this.array = [];
-    }
-    DisplayObjectContainer.prototype.render = function (context2D) {
-        for (var _i = 0, _a = this.array; _i < _a.length; _i++) {
-            var displayObject = _a[_i];
-            displayObject.draw(context2D);
-        }
-    };
-    DisplayObjectContainer.prototype.addChild = function (displayObject) {
-        this.array.push(displayObject);
-        displayObject.parent = this;
-    };
-    DisplayObjectContainer.prototype.removeChild = function (displayObject) {
-        var tempArray = this.array.concat();
-        for (var _i = 0, tempArray_1 = tempArray; _i < tempArray_1.length; _i++) {
-            var each = tempArray_1[_i];
-            if (each == displayObject) {
-                var index = this.array.indexOf(each);
-                tempArray.splice(index, 1);
-                this.array = tempArray;
-                return;
+    window.onmousemove = function (e) {
+        var targetDisplayObjcetArray = EventManager.getInstance().targetDisplayObjcetArray;
+        lastX = currentX;
+        lastY = currentY;
+        currentX = e.offsetX;
+        currentY = e.offsetY;
+        if (isMouseDown) {
+            for (var i = 0; i < targetDisplayObjcetArray.length; i++) {
+                for (var _i = 0, _a = targetDisplayObjcetArray[i].eventArray; _i < _a.length; _i++) {
+                    var event_1 = _a[_i];
+                    if (event_1.type.match("onmousemove") && event_1.ifCapture) {
+                        event_1.func(e);
+                    }
+                }
+            }
+            for (var i = targetDisplayObjcetArray.length - 1; i >= 0; i--) {
+                for (var _b = 0, _c = targetDisplayObjcetArray[i].eventArray; _b < _c.length; _b++) {
+                    var event_2 = _c[_b];
+                    if (event_2.type.match("onmousemove") && !event_2.ifCapture) {
+                        event_2.func(e);
+                    }
+                }
             }
         }
     };
-    return DisplayObjectContainer;
-}(DisplayObject));
+    window.onmouseup = function (e) {
+        isMouseDown = false;
+        var targetDisplayObjcetArray = EventManager.getInstance().targetDisplayObjcetArray;
+        targetDisplayObjcetArray.splice(0, targetDisplayObjcetArray.length);
+        var newHitRusult = stage.hitTest(e.offsetX, e.offsetY);
+        for (var i = targetDisplayObjcetArray.length - 1; i >= 0; i--) {
+            for (var _i = 0, _a = targetDisplayObjcetArray[i].eventArray; _i < _a.length; _i++) {
+                var event_3 = _a[_i];
+                if (event_3.type.match("onclick") && newHitRusult == hitResult) {
+                    event_3.func(e);
+                }
+            }
+        }
+    };
+};
 //# sourceMappingURL=main.js.map
