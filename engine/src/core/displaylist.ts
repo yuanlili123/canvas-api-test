@@ -13,7 +13,7 @@ namespace engine {
 
 
     export interface Drawable {
-        draw(context2D: CanvasRenderingContext2D);
+        update();
     }
 
     export abstract class DisplayObject implements Drawable{
@@ -37,8 +37,11 @@ namespace engine {
 
         eventArray : TheEvent[] = [];
 
-        constructor(){
+        type : string = "displayObject";
 
+        constructor(type : string){
+
+            this.type = type;
             this.matrix = new Matrix();
             this.globalMatrix = new Matrix();
         
@@ -46,7 +49,7 @@ namespace engine {
     
     
         //final，所有子类都要执行且不能修改
-        draw(context2D: CanvasRenderingContext2D) {
+        update(){
         
 
         this.matrix.updateFromDisplayObject(this.x, this.y, this.scaleX, this.scaleY, this.rotation);//初始化矩阵
@@ -64,15 +67,7 @@ namespace engine {
             this.globalAlpha = this.alpha;
             this.globalMatrix = this.matrix;
         }
-
-        context2D.globalAlpha = this.globalAlpha;
-        //console.log(context2D.globalAlpha);
         
-        //变换
-        
-        context2D.setTransform(this.globalMatrix.a, this.globalMatrix.b, this.globalMatrix.c, this.globalMatrix.d, this.globalMatrix.tx, this.globalMatrix.ty);
-        this.render(context2D);
-
         //模板方法模式
     }
 
@@ -84,8 +79,6 @@ namespace engine {
         }
 
         //在子类中重写
-        abstract render(context2D: CanvasRenderingContext2D);
-
         abstract hitTest(x : number, y : number) : DisplayObject;//返回值确定被点击的控件
 
     }
@@ -98,16 +91,11 @@ namespace engine {
 
         constructor() {
         
-            super();
+            super("Bitmap");
             this.image = document.createElement("img");
  
         }
 
-        render(context2D: CanvasRenderingContext2D) {
-
-            context2D.drawImage(this.image, 0, 0, this.image.width, this.image.height);
-            //context2D.drawImage(this.image, 0, 0);
-        }
 
         hitTest(x : number, y : number){
 
@@ -142,13 +130,11 @@ namespace engine {
   
         size : number = 0;
 
-        render(context2D: CanvasRenderingContext2D) {
-        
-            context2D.font = "normal lighter " + this.size + "px"  + " cursive";
-            context2D.fillStyle = this.color;
-            context2D.fillText(this.text, 0, 0);
+        constructor(){
 
+            super("TextField");
         }
+
  
         hitTest(x : number, y : number){
 
@@ -184,14 +170,12 @@ namespace engine {
         size : number = 0;
 
         enable : boolean = false;
- 
-        render(context2D: CanvasRenderingContext2D) {
-        
-            context2D.font = "normal lighter " + this.size + "px"  + " cursive";
-            context2D.fillStyle = this.color;
-            context2D.fillText(this.text, 0, 0);
 
+        constructor(){
+
+            super("Button");
         }
+ 
 
         hitTest(x : number, y : number){
 
@@ -229,11 +213,15 @@ namespace engine {
     
         children : DisplayObject[] = [];
 
-        render(context2D : CanvasRenderingContext2D){
+        constructor() {
+            super("DisplayObjectContainer");
+        }
+
+        update(){
 
             for (let displayObject of this.children) {
 
-                displayObject.draw(context2D);
+                displayObject.update();
             } 
         }
  
@@ -301,7 +289,7 @@ namespace engine {
         constructor(data : MovieClipData) {
             
             super();
-            this.moveSpeed = 2;
+            this.moveSpeed = 4;
             this.setMovieClipData(data);//先执行一次更新
             this.play();
         }
@@ -316,7 +304,7 @@ namespace engine {
 
             let data = this.data;
 
-            console.log(this.currentFrameIndex);
+            //console.log(this.currentFrameIndex);
             this.image.src = data.frames[this.currentFrameIndex].image;
         }
 
